@@ -10,7 +10,7 @@ class PhotoDTO(BaseModel):
     apenas aqui, sem impactar a entidade de saída (PhotoRecord).
     """
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, populate_by_name=True)
 
     album_id: int = Field(alias="albumId")
     id: int = Field(alias="id")
