@@ -54,3 +54,9 @@ pythonpath = ["src"]
 [tool.coverage.run]
 source = ["src/photos_etl"]
 omit = ["*/__init__.py"]
+
+[tool.poetry]
+packages = [{ include = "photos_etl", from = "src" }]
+
+[tool.poetry.scripts]
+run-pipeline = "photos_etl.main:main"
