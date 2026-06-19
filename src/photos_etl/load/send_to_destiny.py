@@ -34,7 +34,9 @@ class SendToDestiny:
         """Agrupa os registros por album_id e persiste cada grupo em seu CSV.
 
         Returns:
-            Lista de caminhos dos arquivos CSV escritos ou atualizados.
+            Lista de caminhos dos arquivos CSV que tiveram registros novos
+            de fato escritos. Álbuns sem nenhum registro novo não aparecem
+            na lista, mesmo que o arquivo já exista.
         """
         self._output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -43,8 +45,9 @@ class SendToDestiny:
 
         for album_id, album_records in records_by_album.items():
             file_path = self._output_dir / f"photos_album_{album_id}.csv"
-            self._write_album_csv(file_path, album_records)
-            written_files.append(file_path)
+            was_written = self._write_album_csv(file_path, album_records)
+            if was_written:
+                written_files.append(file_path)
 
         return written_files
 
@@ -57,12 +60,12 @@ class SendToDestiny:
             grouped[record.album_id].append(record)
         return dict(grouped)
 
-    def _write_album_csv(self, file_path: Path, records: list[PhotoRecord]) -> None:
+    def _write_album_csv(self, file_path: Path, records: list[PhotoRecord]) -> bool:
         existing_photo_ids = self._read_existing_photo_ids(file_path)
         new_records = [r for r in records if r.photo_id not in existing_photo_ids]
 
         if not new_records:
-            return
+            return False
 
         file_already_exists = file_path.exists()
         with file_path.open(mode="a", newline="", encoding="utf-8") as csv_file:
@@ -82,6 +85,8 @@ class SendToDestiny:
                         "processed_at": record.processed_at.isoformat(),
                     }
                 )
+
+        return True
 
     @staticmethod
     def _read_existing_photo_ids(file_path: Path) -> set[int]:
