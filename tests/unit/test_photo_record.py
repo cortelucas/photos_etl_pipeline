@@ -1,5 +1,7 @@
 """Testes unitários do PhotoRecord."""
 
+from datetime import datetime
+
 import pytest
 from pydantic import ValidationError
 
@@ -14,11 +16,13 @@ class TestPhotoRecord:
             title="accusamus beatae ad facilis cum similique qui sunt",
             image_url="https://via.placeholder.com/600/92c952",
             thumbnail_url="https://via.placeholder.com/150/92c952",
+            processed_at=datetime(2026, 6, 19, 12, 0, 0),
         )
 
         assert record.album_id == 1
         assert record.photo_id == 1
         assert record.title == "accusamus beatae ad facilis cum similique qui sunt"
+        assert record.processed_at == datetime(2026, 6, 19, 12, 0, 0)
 
     def test_raises_validation_error_when_photo_id_is_not_an_integer(self) -> None:
         with pytest.raises(ValidationError):
@@ -28,6 +32,7 @@ class TestPhotoRecord:
                 title="titulo qualquer",
                 image_url="https://via.placeholder.com/600/92c952",
                 thumbnail_url="https://via.placeholder.com/150/92c952",
+                processed_at=datetime(2026, 6, 19, 12, 0, 0),
             )
 
     def test_instance_is_immutable(self) -> None:
@@ -37,6 +42,7 @@ class TestPhotoRecord:
             title="titulo qualquer",
             image_url="https://via.placeholder.com/600/92c952",
             thumbnail_url="https://via.placeholder.com/150/92c952",
+            processed_at=datetime(2026, 6, 19, 12, 0, 0),
         )
 
         with pytest.raises(ValidationError):

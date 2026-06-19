@@ -1,5 +1,7 @@
 """Entidade de saída representando um registro pronto para persistência em CSV."""
 
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict
 
 
@@ -17,3 +19,4 @@ class PhotoRecord(BaseModel):
     title: str
     image_url: str
     thumbnail_url: str
+    processed_at: datetime
