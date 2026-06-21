@@ -2,16 +2,16 @@
 
 import csv
 from pathlib import Path
-from typing import Any
 
 import httpx
 import pytest
 from pytest_mock import MockerFixture
 
+from photos_etl.config import Settings
 from photos_etl.main import main, run_pipeline
 
 
-def build_fake_api_payload() -> list[dict[str, Any]]:
+def build_fake_api_payload() -> list[dict[str, str | int]]:
     return [
         {
             "albumId": 1,
@@ -21,6 +21,10 @@ def build_fake_api_payload() -> list[dict[str, Any]]:
             "thumbnailUrl": "https://via.placeholder.com/150/92c952",
         }
     ]
+
+
+def build_test_settings(output_dir: Path) -> Settings:
+    return Settings(output_dir=output_dir, batch_size=500)
 
 
 class TestRunPipeline:
@@ -34,7 +38,8 @@ class TestRunPipeline:
         mock_http_client = mocker.Mock(spec=httpx.Client)
         mock_http_client.get.return_value = mock_response
 
-        written_files = run_pipeline(http_client=mock_http_client, output_dir=tmp_path)
+        settings = build_test_settings(output_dir=tmp_path)
+        written_files = run_pipeline(http_client=mock_http_client, settings=settings)
 
         assert written_files == [tmp_path / "photos_album_1.csv"]
 
@@ -59,7 +64,10 @@ class TestMain:
         mock_http_client_instance.__exit__ = mocker.Mock(return_value=False)
 
         mocker.patch("photos_etl.main.httpx.Client", return_value=mock_http_client_instance)
-        mocker.patch("photos_etl.main.OUTPUT_DIR", tmp_path)
+        mocker.patch(
+            "photos_etl.main.get_settings",
+            return_value=build_test_settings(output_dir=tmp_path),
+        )
 
         main()
 
