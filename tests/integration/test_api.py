@@ -1,7 +1,8 @@
-"""Testes de integração da API FastAPI, validando o endpoint /start."""
+"""Testes de integração da API FastAPI, validando os endpoints e o lifespan."""
 
 from pathlib import Path
 
+import httpx
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
@@ -33,7 +34,6 @@ class TestHealthCheck:
 
 class TestStartEndpoint:
     def test_returns_accepted_status_immediately(self, mocker: MockerFixture) -> None:
-        # Mocka a execução real para não bater na API/disco verdadeiros neste teste.
         mocker.patch("photos_etl.api.app._execute_pipeline_in_background")
 
         response = client.get("/start")
@@ -49,8 +49,6 @@ class TestStartEndpoint:
 
         client.get("/start")
 
-        # TestClient executa BackgroundTasks de forma síncrona ao final da resposta,
-        # então neste ponto a tarefa já deve ter sido chamada.
         mock_execute.assert_called_once()
 
     def test_runs_real_pipeline_end_to_end_with_mocked_http_and_settings(
@@ -58,8 +56,6 @@ class TestStartEndpoint:
     ) -> None:
         """Valida a integração real entre /start e o pipeline, mockando apenas
         a chamada HTTP externa e o diretório de output (via Settings)."""
-        import httpx
-
         mock_response = mocker.Mock(spec=httpx.Response)
         mock_response.json.return_value = build_fake_api_payload()
         mock_response.raise_for_status.return_value = None
@@ -79,3 +75,22 @@ class TestStartEndpoint:
 
         assert response.status_code == 200
         assert (tmp_path / "photos_album_1.csv").exists()
+
+
+class TestLifespan:
+    def test_scheduler_starts_and_shuts_down_with_app_lifespan(self, mocker: MockerFixture) -> None:
+        mock_scheduler = mocker.Mock()
+        mock_build_scheduler = mocker.patch(
+            "photos_etl.api.app.build_scheduler", return_value=mock_scheduler
+        )
+
+        with TestClient(app) as test_client:
+            # Dentro do bloco "with", o lifespan já deve ter iniciado o scheduler.
+            mock_build_scheduler.assert_called_once()
+            mock_scheduler.start.assert_called_once()
+
+            response = test_client.get("/health")
+            assert response.status_code == 200
+
+        # Ao saír do bloco "with", o lifespan deve ter encerrado o scheduler.
+        mock_scheduler.shutdown.assert_called_once_with(wait=False)
